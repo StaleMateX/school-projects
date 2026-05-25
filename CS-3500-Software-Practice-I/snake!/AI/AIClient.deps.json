@@ -1,0 +1,92 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v7.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v7.0": {
+      "AIClient/1.0.0": {
+        "dependencies": {
+          "Common": "1.0.0",
+          "GameController": "1.0.0",
+          "Networking": "1.0.0",
+          "Vector2D": "1.0.0",
+          "World": "1.0.0"
+        },
+        "runtime": {
+          "AIClient.dll": {}
+        }
+      },
+      "Common/1.0.0": {
+        "dependencies": {
+          "Vector2D": "1.0.0"
+        },
+        "runtime": {
+          "Common.dll": {}
+        }
+      },
+      "GameController/1.0.0": {
+        "dependencies": {
+          "Networking": "1.0.0",
+          "Vector2D": "1.0.0",
+          "World": "1.0.0"
+        },
+        "runtime": {
+          "GameController.dll": {}
+        }
+      },
+      "Networking/1.0.0": {
+        "runtime": {
+          "Networking.dll": {}
+        }
+      },
+      "Vector2D/1.0.0": {
+        "runtime": {
+          "Vector2D.dll": {}
+        }
+      },
+      "World/1.0.0": {
+        "dependencies": {
+          "Common": "1.0.0",
+          "Vector2D": "1.0.0"
+        },
+        "runtime": {
+          "World.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "AIClient/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Common/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "GameController/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Networking/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Vector2D/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "World/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

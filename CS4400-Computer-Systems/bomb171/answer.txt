@@ -1,0 +1,6 @@
+phase 1 When a problem comes along, you must zip it!
+phase 2 2 3 5 8 12 17
+phase 3 2 403
+phase 4 108 2
+phase 5 EEEBHH
+

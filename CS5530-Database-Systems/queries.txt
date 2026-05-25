@@ -1,0 +1,32 @@
+#3.1
+select Title from Titles where Author = "...";
+#3.2
+select Serial from Inventory where ISBN in (select ISBN from Titles where Author = "...");
+#3.3
+SELECT Title FROM Titles JOIN Inventory I ON Titles.ISBN = I.ISBN JOIN CheckedOut C ON I.Serial = C.Serial JOIN Patrons P ON C.CardNum = P.CardNum WHERE P.Name = "...";
+#3.4
+SELECT Phone FROM Phones JOIN Patrons ON Phones.CardNum = Patrons.CardNum JOIN CheckedOut ON Patrons.CardNum = CheckedOut.CardNum JOIN Inventory ON CheckedOut.Serial = Inventory.Serial JOIN Titles ON Inventory.ISBN = Titles.ISBN WHERE Titles.Title = "...";
+#4.1
+SELECT Title FROM Titles NATURAL JOIN Inventory ORDER BY Inventory.Serial LIMIT ...;
+#4.2
+SELECT Name FROM Patrons JOIN CheckedOut ON Patrons.CardNum = CheckedOut.CardNum JOIN Inventory ON CheckedOut.Serial = Inventory.Serial ORDER BY Inventory.Serial DESC LIMIT 1;
+#4.3
+SELECT Title FROM Titles WHERE SUBSTRING(Titles.Author, 1, 1) = 'K';
+#4.4
+SELECT DISTINCT ISBN, Title FROM Inventory NATURAL JOIN Titles;
+#5.1
+INSERT INTO Patrons (Name) VALUES ('Mia');
+#5.2
+DELETE FROM Phones WHERE Phone = "555-5555";
+#5.3
+DELETE FROM CheckedOut; 
+DELETE FROM Inventory; 
+DELETE FROM Patrons;
+DELETE FROM Phones;
+DELETE FROM Titles;
+#5.4
+ALTER TABLE Titles
+DROP PRIMARY KEY;
+#5.5
+ALTER TABLE Inventory
+ADD FOREIGN KEY (ISBN) REFERENCES Titles(ISBN);

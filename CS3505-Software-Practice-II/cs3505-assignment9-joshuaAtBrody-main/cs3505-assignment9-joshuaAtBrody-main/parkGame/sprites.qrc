@@ -1,0 +1,26 @@
+<RCC>
+    <qresource prefix="/">
+        <file>PlayerEncounter.png</file>
+        <file>Bison.png</file>
+        <file>Boots.png</file>
+        <file>Deer.gif</file>
+        <file>BEAR.png</file>
+        <file>Garbage.png</file>
+        <file>deer1.png</file>
+        <file>deer2.png</file>
+        <file>deer3.png</file>
+        <file>deer4.png</file>
+        <file>Lunchbox.png</file>
+        <file>forest.png</file>
+        <file>parkBackground.jpg</file>
+    </qresource>
+    <qresource prefix="/player">
+        <file alias="walkDown1">Visual resources/Sprites/Player/Player walk down 1.png</file>
+        <file alias="walkDown2">Visual resources/Sprites/Player/Player walk down 2.png</file>
+        <file alias="walkRight1">Visual resources/Sprites/Player/Player walk right 1.png</file>
+        <file alias="walkRight2">Visual resources/Sprites/Player/Player walk right 2.png</file>
+        <file alias="walkUp1">Visual resources/Sprites/Player/Player walk up 1.png</file>
+        <file alias="walkUp2">Visual resources/Sprites/Player/Player walk up 2.png</file>
+    </qresource>
+    <qresource prefix="/images"/>
+</RCC>

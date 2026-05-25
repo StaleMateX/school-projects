@@ -1,0 +1,531 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.IO;
+using System.Text.RegularExpressions;
+
+namespace ChessBrowser
+{
+    /// <summary>
+    /// Class representing a single chess game
+    /// </summary>
+    public class ChessGame
+    {
+        /// <summary>
+        /// event name
+        /// </summary>
+        public string? Event { get; set; }
+        /// <summary>
+        /// event site
+        /// </summary>
+        public string? Site { get; set; }
+        /// <summary>
+        /// the round in which the game took place
+        /// </summary>
+        public string? Round { get; set; }
+        /// <summary>
+        /// the name of the white player
+        /// </summary>
+        public string? White { get; set; }
+        /// <summary>
+        /// the name of the black player
+        /// </summary>
+        public string? Black { get; set; }
+        /// <summary>
+        /// the white player's Elo rating at the time of the game
+        /// </summary>
+        public int WhiteElo { get; set; }
+        /// <summary>
+        /// the black player's Elo rating at the time of the game
+        /// </summary>
+        public int BlackElo { get; set; }
+        /// <summary>
+        /// the result of the game.
+        /// </summary>
+        public char Result { get; set; }
+        /// <summary>
+        /// the event date 
+        /// </summary>
+        public string? EventDate { get; set; }
+        /// <summary>
+        /// The text representing the moves. This always comes after a blank line following the above tagged data.
+        /// </summary>
+        public string Moves { get; set; }
+        /// <summary>
+        /// moves list
+        /// </summary>
+        public ChessGame()
+        {
+            Moves = "";
+        }
+    }
+    /// <summary>
+    /// Static class that be able to read PGN files
+    /// </summary>
+    public static class ParsingPGNFile
+    {
+        /// <summary>
+        /// Method to read games from a PGN file
+        /// </summary>
+        /// <param name="filename">the file name</param>
+        /// <returns>the list of the game detail</returns>
+        public static List<ChessGame> ReadGamesFromPGNFile(string filename)
+        {
+            List<ChessGame> games = new List<ChessGame>();
+            string[] fileContent = File.ReadAllLines(filename);
+            ChessGame game = new ChessGame();
+            // Split the game content into lines and iterate through each line
+            StringBuilder moves = new StringBuilder();
+
+            foreach (string line in fileContent)
+            {
+                if(line == "")
+                {
+                    // If it's an empty line and we were already in the moves section, it's the end of the moves
+                    if (moves.Length > 0)
+                    {
+                        game.Moves = moves.ToString().Trim();
+                        games.Add(game);
+
+                        // Reset variables for the next game
+                        game = new ChessGame();
+                        moves.Clear();
+                    }
+                    continue; // Skip processing empty lines
+                }
+
+
+                // Check each line for known tags and get down the information
+                if (line.StartsWith("[Event "))
+                {
+                    game.Event = GetValue(line);
+                }
+                else if (line.StartsWith("[Site "))
+                {
+                    game.Site = GetValue(line);
+                }
+                else if (line.StartsWith("[Date "))
+                {
+                    continue;
+                }
+                else if (line.StartsWith("[Round "))
+                {
+                    game.Round = GetValue(line);
+                }
+                else if (line.StartsWith("[White "))
+                {
+                    game.White = GetValue(line);
+                }
+                else if (line.StartsWith("[Black "))
+                {
+                    game.Black = GetValue(line);
+                }
+                else if (line.StartsWith("[WhiteElo "))
+                {
+                    int.TryParse(GetValue(line), out int whiteElo);
+                    game.WhiteElo = whiteElo;
+                }
+                else if (line.StartsWith("[BlackElo "))
+                {
+                    int.TryParse(GetValue(line), out int blackElo);
+                    game.BlackElo = blackElo;
+                }
+                else if (line.StartsWith("[Result "))
+                {
+                    string result = GetValue(line);
+                    if (result == "1-0")
+                    {
+                        //"1-0" means white won
+                        game.Result = 'W';
+                    }
+                    else if (result == "0-1")
+                    {
+                        //"0-1" means black won
+                        game.Result = 'B';
+                    }
+                    else
+                    {
+                        //else is draw
+                        game.Result = 'D';
+                    }
+                }
+                else if (line.StartsWith("[ECO "))
+                {
+                    continue;
+                }
+                else if (line.StartsWith("[EventDate "))
+                {
+                    game.EventDate = GetValue(line);
+                }
+                else if(!line.StartsWith("["))
+                {
+                        // If the line does not start with a tag, it contains the moves
+                        moves.AppendLine(line.Trim());
+                }
+
+            }
+
+            // Add the last game if it has moves
+            if (!string.IsNullOrWhiteSpace(game.Moves))
+            {
+                games.Add(game);
+            }
+
+            return games;
+        }
+
+        /// <summary>
+        /// private helper method to get value in between "" from pgn file
+        /// </summary>
+        /// <param name="line">the line of that text</param>
+        /// <returns>return the value within ""</returns>
+        private static string GetValue(string line)
+        {
+            return line.Split('"')[1];
+        }
+
+    }
+}
+
+
+using Microsoft.Maui.Controls;
+using MySqlConnector;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+/*
+  Author: Daniel Kopta and ...
+  Chess browser backend 
+*/
+
+namespace ChessBrowser
+{
+    internal class Queries
+    {
+
+        /// <summary>
+        /// This function runs when the upload button is pressed.
+        /// Given a filename, parses the PGN file, and uploads
+        /// each chess game to the user's database.
+        /// </summary>
+        /// <param name="PGNfilename">The path to the PGN file</param>
+        internal static async Task InsertGameData(string PGNfilename, MainPage mainPage)
+        {
+            // This will build a connection string to your user's database on atr,
+            // assuimg you've typed a user and password in the GUI
+            string connection = mainPage.GetConnectionString();
+
+            //Load and parse the PGN file
+            //We recommend creating separate libraries to represent chess data and load the file
+            List<ChessGame> games = ParsingPGNFile.ReadGamesFromPGNFile(PGNfilename);
+
+            // TODO:
+            //       Use this to tell the GUI's progress bar how many total work steps there are
+            //       For example, one iteration of your main upload loop could be one work step
+            //mainPage.SetNumWorkItems( ... );
+
+
+            using (MySqlConnection conn = new MySqlConnection(connection))
+            {
+                try
+                {
+                    // Open a connection
+                    conn.Open();
+
+
+                    //       iterate through your data and generate appropriate insert commands
+                    foreach (var game in games)
+                    {
+                        // Check if the players exist in the database
+                        int whitePlayerID = GetOrUpdatePlayerID(game.White, game.WhiteElo, conn);
+                        int blackPlayerID = GetOrUpdatePlayerID(game.Black, game.BlackElo, conn);
+
+                        // Insert the event if it doesn't exist
+                        int eventID = GetOrUpdateEventID(game.Event, game.Site, game.EventDate, conn);
+
+                        // Insert the game into the database
+                        InsertGame(game, eventID, whitePlayerID, blackPlayerID, conn);
+                        //       Use this inside a loop to tell the GUI that one work step has completed:
+                        await mainPage.NotifyWorkItemCompleted();
+                    }
+
+                }
+                catch (Exception e)
+                {
+                    System.Diagnostics.Debug.WriteLine(e.Message);
+                }
+            }
+
+        }
+
+
+        /// <summary>
+        /// Queries the database for games that match all the given filters.
+        /// The filters are taken from the various controls in the GUI.
+        /// </summary>
+        /// <param name="white">The white player, or null if none</param>
+        /// <param name="black">The black player, or null if none</param>
+        /// <param name="opening">The first move, e.g. "1.e4", or null if none</param>
+        /// <param name="winner">The winner as "W", "B", "D", or null if none</param>
+        /// <param name="useDate">True if the filter includes a date range, False otherwise</param>
+        /// <param name="start">The start of the date range</param>
+        /// <param name="end">The end of the date range</param>
+        /// <param name="showMoves">True if the returned data should include the PGN moves</param>
+        /// <returns>A string separated by newlines containing the filtered games</returns>
+        internal static string PerformQuery(string white, string black, string opening,
+          string winner, bool useDate, DateTime start, DateTime end, bool showMoves,
+          MainPage mainPage)
+        {
+            // This will build a connection string to your user's database on atr,
+            // assuimg you've typed a user and password in the GUI
+            string connection = mainPage.GetConnectionString();
+
+            // Build up this string containing the results from your query
+            string parsedResult = "";
+
+            // Use this to count the number of rows returned by your query
+            // (see below return statement)
+            int numRows = 0;
+
+            using (MySqlConnection conn = new MySqlConnection(connection))
+            {
+                try
+                {
+                    // Open a connection
+                    conn.Open();
+
+                    //       Generate and execute an SQL command,
+                    //       then parse the results into an appropriate string and return it.
+                    string query = ConstructQuery(white, black, opening, winner, useDate, start, end, showMoves);
+
+                    MySqlCommand command = new MySqlCommand(query, conn);
+                    using (var reader = command.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            parsedResult += FormatGame(reader, showMoves);
+                            numRows++;
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    System.Diagnostics.Debug.WriteLine(e.Message);
+                }
+            }
+
+            return numRows + " results\n" + parsedResult;
+        }
+        /// <summary>
+        /// get the player id or update it if there isn't one
+        /// </summary>
+        /// <param name="playerName">player name</param>
+        /// <param name="elo">player elo</param>
+        /// <param name="conn">sql connection</param>
+        /// <returns></returns>
+        private static int GetOrUpdatePlayerID(string playerName, int elo, MySqlConnection conn)
+        {
+            // Check if player exists in database, return their ID if found, otherwise insert and return the new ID
+            int playerID = GetPlayerID(playerName, conn);
+            if (playerID == -1)
+            {
+                playerID = InsertPlayer(playerName, elo, conn);
+            }
+            else
+            {
+                // Update player's Elo if the new Elo is higher
+                UpdatePlayerElo(playerID, elo, conn);
+            }
+            return playerID;
+        }
+        /// <summary>
+        /// get the player id from game
+        /// </summary>
+        /// <param name="playerName">player name</param>
+        /// <param name="conn">connection</param>
+        /// <returns>int type player id</returns>
+        private static int GetPlayerID(string playerName, MySqlConnection conn)
+        {
+            // Check if player exists in database, return their ID if found, otherwise return -1
+            string query = "SELECT pID FROM Players WHERE Name = @Name";
+            MySqlCommand command = new MySqlCommand(query, conn);
+            command.Parameters.AddWithValue("@Name", playerName);
+
+            // Execute the SQL command and retrieve the result (which is the player ID) as an object
+            object? result = command.ExecuteScalar();
+            // Check if the result is null, If the result is null, return -1 for that the player was not found.
+            // Otherwise, convert the result to an integer and return it as the player ID.
+            return result == null ? -1 : Convert.ToInt32(result);
+        }
+        /// <summary>
+        /// insert the player info into database
+        /// </summary>
+        /// <param name="playerName">player name</param>
+        /// <param name="elo">player elo</param>
+        /// <param name="conn">sql connection</param>
+        /// <returns>return the insert int player id</returns>
+        private static int InsertPlayer(string playerName, int elo, MySqlConnection conn)
+        {
+            // Insert player into the database and return their ID
+            string query = "INSERT INTO Players (Name, Elo) VALUES (@Name, @Elo)";
+            MySqlCommand command = new MySqlCommand(query, conn);
+            command.Parameters.AddWithValue("@Name", playerName);
+            command.Parameters.AddWithValue("@Elo", elo);
+            command.ExecuteNonQuery();
+
+            return (int)command.LastInsertedId;
+        }
+        /// <summary>
+        /// update player elo to the greater one if there is duplicate
+        /// </summary>
+        /// <param name="playerName">player name</param>
+        /// <param name="elo">player elo</param>
+        /// <param name="conn">sql connection</param>
+        private static void UpdatePlayerElo(int playerID, int elo, MySqlConnection conn)
+        {
+            // Update player's Elo if the new Elo is higher
+            string query = "UPDATE Players SET Elo = GREATEST(Elo, @Elo) WHERE pID = @PlayerID";
+            MySqlCommand command = new MySqlCommand(query, conn);
+            command.Parameters.AddWithValue("@Elo", elo);
+            command.Parameters.AddWithValue("@PlayerID", playerID);
+            command.ExecuteNonQuery();
+        }
+        /// <summary>
+        /// get the event id or update it if there isn't one
+        /// </summary>
+        /// <param name="eventName">event name</param>
+        /// <param name="site">place</param>
+        /// <param name="eventDate">event date</param>
+        /// <param name="conn">sql connection</param>
+        /// <returns>int type event id</returns>
+        private static int GetOrUpdateEventID(string eventName, string site, string eventDate, MySqlConnection conn)
+        {
+            // Check if event exists in database, return its ID if found, otherwise insert and return the new ID
+            int eventID = GetEventID(eventName, site, eventDate, conn);
+            if (eventID == -1)
+            {
+                eventID = InsertEvent(eventName, site, eventDate, conn);
+            }
+            return eventID;
+        }
+        /// <summary>
+        /// get the event id 
+        /// </summary>
+        /// <param name="eventName">event name</param>
+        /// <param name="site">place</param>
+        /// <param name="eventDate">event date</param>
+        /// <param name="conn">sql connection</param>
+        /// <returns>int type event id</returns>
+        private static int GetEventID(string eventName, string site, string eventDate, MySqlConnection conn)
+        {
+            // Check if event exists in database, return its ID if found, otherwise return -1
+            string query = "SELECT eID FROM Events WHERE Name = @Name AND Site = @Site AND Date = @Date";
+            MySqlCommand command = new MySqlCommand(query, conn);
+            command.Parameters.AddWithValue("@Name", eventName);
+            command.Parameters.AddWithValue("@Site", site);
+            command.Parameters.AddWithValue("@Date", DateTime.Parse(eventDate));
+
+            object ?result = command.ExecuteScalar();
+            // Check if the result is null, If the result is null, return -1 for that the event was not found.
+            // Otherwise, convert the result to an integer and return it as the evebt ID.
+            return result == null ? -1 : Convert.ToInt32(result);
+        }
+        /// <summary>
+        /// insert the event
+        /// </summary>
+        /// <param name="eventName">event name</param>
+        /// <param name="site">place</param>
+        /// <param name="eventDate">event date</param>
+        /// <param name="conn">sql connection</param>
+        /// <returns>int type event id that insert</returns>
+        private static int InsertEvent(string eventName, string site, string eventDate, MySqlConnection conn)
+        {
+            // Insert event into the database and return its ID
+            string query = "INSERT INTO Events (Name, Site, Date) VALUES (@Name, @Site, @Date)";
+            MySqlCommand command = new MySqlCommand(query, conn);
+            command.Parameters.AddWithValue("@Name", eventName);
+            command.Parameters.AddWithValue("@Site", site);
+            command.Parameters.AddWithValue("@Date", DateTime.Parse(eventDate));
+            command.ExecuteNonQuery();
+
+            return (int)command.LastInsertedId;
+        }
+        /// <summary>
+        /// insert game into database
+        /// </summary>
+        /// <param name="game">game info from ChessGame</param>
+        /// <param name="eventID">event id</param>
+        /// <param name="whitePlayerID">white player id</param>
+        /// <param name="blackPlayerID">black player id</param>
+        /// <param name="conn">sql connection</param>
+        private static void InsertGame(ChessGame game, int eventID, int whitePlayerID, int blackPlayerID, MySqlConnection conn)
+        {
+            // Insert the game into the database
+            string query = "INSERT INTO Games (Round, Result, Moves, BlackPlayer, WhitePlayer, eID) " +
+                           "VALUES (@Round, @Result, @Moves, @BlackPlayer, @WhitePlayer, @EventID)";
+            MySqlCommand command = new MySqlCommand(query, conn);
+            command.Parameters.AddWithValue("@Round", game.Round);
+            command.Parameters.AddWithValue("@Result", game.Result);
+            command.Parameters.AddWithValue("@Moves", game.Moves);
+            command.Parameters.AddWithValue("@BlackPlayer", blackPlayerID);
+            command.Parameters.AddWithValue("@WhitePlayer", whitePlayerID);
+            command.Parameters.AddWithValue("@EventID", eventID);
+            command.ExecuteNonQuery();
+        }
+        /// <summary>
+        /// construct the query
+        /// </summary>
+        /// <param name="white"></param>
+        /// <param name="black"></param>
+        /// <param name="opening"></param>
+        /// <param name="winner"></param>
+        /// <param name="useDate"></param>
+        /// <param name="start"></param>
+        /// <param name="end"></param>
+        /// <param name="showMoves"></param>
+        /// <returns></returns>
+        private static string ConstructQuery(string white, string black, string opening, string winner, bool useDate, DateTime start, DateTime end, bool showMoves)
+        {
+            string query = "SELECT * FROM Games WHERE 1=1";
+
+            if (!string.IsNullOrEmpty(white))
+                query += $" AND White = '{white}'";
+            if (!string.IsNullOrEmpty(black))
+                query += $" AND Black = '{black}'";
+            if (!string.IsNullOrEmpty(opening))
+                query += $" AND Moves LIKE '{opening}%'";
+            if (!string.IsNullOrEmpty(winner))
+                query += $" AND Result = '{winner}'";
+            if (useDate)
+                query += $" AND EventDate BETWEEN '{start:yyyy-MM-dd}' AND '{end:yyyy-MM-dd}'";
+
+            return query;
+        }
+        /// <summary>
+        /// format the game
+        /// </summary>
+        /// <param name="reader"></param>
+        /// <param name="showMoves"></param>
+        /// <returns></returns>
+        private static string FormatGame(MySqlDataReader reader, bool showMoves)
+        {
+            string formattedGame = $"Event: {reader.GetString("Event")}\n" +
+                                   $"Site: {reader.GetString("Site")}\n" +
+                                   $"Date: {reader.GetDateTime("EventDate")}\n" +
+                                   $"White: {reader.GetString("White")} ({reader.GetInt32("WhiteElo")})\n" +
+                                   $"Black: {reader.GetString("Black")} ({reader.GetInt32("BlackElo")})\n" +
+                                   $"Result: {reader.GetChar("Result")}\n";
+
+            if (showMoves)
+                formattedGame += $"Moves: {reader.GetString("Moves")}\n";
+
+            return formattedGame + "\n";
+        }
+    }
+}

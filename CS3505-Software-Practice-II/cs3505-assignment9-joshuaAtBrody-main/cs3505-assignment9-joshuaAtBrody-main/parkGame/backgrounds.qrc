@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/">
+        <file alias="basicPath">REALLY basic path.png</file>
+    </qresource>
+</RCC>

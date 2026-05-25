@@ -1,0 +1,1 @@
+g++ -o testTransform testTransform.cpp point.cpp transform.cpp

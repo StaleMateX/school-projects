@@ -1,0 +1,22 @@
+phase_1
+When a problem comes along, you must zip it!
+
+phase_2
+2 3 5 8 12 17
+
+phase_3
+2 403
+
+phase_4
+108 2
+
+phase_5
+EEEBHH
+
+phase_6
+5 2 4 6 1 3
+
+phase_7
+
+
+break *0x401539

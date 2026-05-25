@@ -1,0 +1,102 @@
+#1.1
+SELECT Patrons.Name
+FROM Patrons
+JOIN (
+    SELECT CardNum, COUNT(*) AS NumCheckouts
+    FROM CheckedOut
+    GROUP BY CardNum
+    ORDER BY NumCheckouts DESC
+    LIMIT 1
+) AS MaxCheckouts ON Patrons.CardNum = MaxCheckouts.CardNum;
+#1.2
+SELECT Author
+FROM Titles
+GROUP BY Author
+HAVING COUNT(DISTINCT ISBN) > 1;
+#1.3
+SELECT Author
+FROM Titles
+WHERE ISBN IN (
+    SELECT ISBN
+    FROM Inventory
+    GROUP BY ISBN
+    HAVING COUNT(*) > 1
+);
+#1.4
+SELECT Name,
+       IFNULL(Numbooks, 0) AS Numbooks,
+       CASE
+           WHEN Numbooks > 2 THEN 'Platinum'
+           WHEN Numbooks = 2 THEN 'Gold'
+           WHEN Numbooks = 1 THEN 'Silver'
+           ELSE 'Bronze'
+       END AS Loyalty
+FROM Patrons
+LEFT JOIN (
+    SELECT CardNum, COUNT(*) AS Numbooks
+    FROM CheckedOut
+    GROUP BY CardNum
+) AS BookCounts ON Patrons.CardNum = BookCounts.CardNum;
+#2.1
+SELECT Name
+FROM Players
+WHERE Elo >= 2850;
+#2.2
+SELECT DISTINCT Name
+FROM Players
+JOIN Games ON Players.pID = Games.WhitePlayer;
+#2.3
+SELECT DISTINCT p.Name
+FROM Players p
+JOIN Games g ON p.pID = g.WhitePlayer
+WHERE g.Result = 'W';
+#2.4
+SELECT DISTINCT Players.Name
+FROM Players
+JOIN Games ON Players.pID = Games.BlackPlayer OR Players.pID = Games.WhitePlayer
+JOIN Events ON Games.eID = Events.eID
+WHERE Events.Date BETWEEN '2018-01-01' AND '2018-12-31';
+#2.5
+SELECT DISTINCT Events.Name, Events.Date
+FROM Games
+JOIN Players AS WhitePlayers ON Games.WhitePlayer = WhitePlayers.pID
+JOIN Players AS BlackPlayers ON Games.BlackPlayer = BlackPlayers.pID
+JOIN Events ON Games.eID = Events.eID
+WHERE (WhitePlayers.Name = 'Carlsen, Magnus' AND Games.Result = 'B')
+   OR (BlackPlayers.Name = 'Carlsen, Magnus' AND Games.Result = 'W');
+#2.6
+SELECT DISTINCT p1.Name
+FROM Players p1
+JOIN Games g ON p1.pID = g.BlackPlayer OR p1.pID = g.WhitePlayer
+JOIN Players p2 ON (p2.pID = g.BlackPlayer OR p2.pID = g.WhitePlayer) AND p2.Name = 'Carlsen, Magnus'
+WHERE p1.Name != 'Carlsen, Magnus';
+#2.7
+SELECT DISTINCT Name
+FROM Players
+WHERE pID NOT IN (
+    SELECT DISTINCT BlackPlayer AS pID
+    FROM Games
+    WHERE Result = 'W'
+    
+    UNION
+    
+    SELECT DISTINCT WhitePlayer AS pID
+    FROM Games
+    WHERE Result = 'B'
+);
+#3.1
+DELETE FROM CheckedOut
+WHERE CardNum = (
+    SELECT CardNum
+    FROM Patrons
+    WHERE Name = '...'
+);
+#3.2
+INSERT INTO CheckedOut (CardNum, Serial)
+SELECT p.CardNum, i.Serial
+FROM Patrons p
+JOIN Titles t ON t.Title = '...1'
+JOIN Inventory i ON i.ISBN = t.ISBN
+LEFT JOIN CheckedOut co ON i.Serial = co.Serial
+WHERE p.Name = '...2' AND co.Serial IS NULL
+LIMIT 1;

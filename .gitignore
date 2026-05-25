@@ -1,0 +1,23 @@
+# Qt build folders
+build-*/
+Debug/
+Release/
+
+# CMake
+CMakeFiles/
+.cmake/
+*.cmake
+
+# Visual Studio
+bin/
+obj/
+.vs/
+
+# Python
+__pycache__/
+*.pyc
+
+# General
+*.dll
+*.exe
+*.obj
